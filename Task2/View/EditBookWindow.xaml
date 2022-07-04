@@ -1,0 +1,36 @@
+﻿<Window x:Class="Task2.View.EditBookWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Task2.View"
+        mc:Ignorable="d"
+        Title="EditBookWindow" Height="350" Width="400"
+        Name="EditBookWnd">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="50"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Vertical"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="200">
+            <TextBlock Text="Новое имя автора"/>
+            <TextBox Name ="NameBlock" Text="{Binding AuthName}"/>
+            <TextBlock Text="Новая фамилия автора"/>
+            <TextBox Name ="LastnameBlock" Text="{Binding AuthLastname}"/>
+            <TextBlock Text="Новое отчество автора"/>
+            <TextBox Name ="PatroBlock" Text="{Binding AuthPatro}"/>
+            <TextBlock Text="Новая дата рождения автора"/>
+            <TextBox Name ="DateBlock" Text="{Binding DateOfBirth}"/>
+            <TextBlock Text="Новое название книги"/>
+            <TextBox Name ="BookBlock" Text="{Binding BookName}"/>
+            <TextBlock Text="Новый год написания"/>
+            <TextBox Name ="YearBlock" Text="{Binding YearOfCreate}"/>
+        </StackPanel>
+        <Button Grid.Row="1" Content="Обновить книгу"
+                Command="{Binding EditBook}"
+                CommandParameter="{Binding ElementName=EditBookWnd}"/>
+    </Grid>
+</Window>

@@ -1,0 +1,36 @@
+﻿<Window x:Class="Task2.View.AddNewBookWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Task2.View"
+        mc:Ignorable="d"
+        Title="AddNewBookWindow" Height="350" Width="400"
+        Name="AddNewBookWnd">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="50"/>    
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Vertical"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="200">
+            <TextBlock Text="Имя автора"/>
+            <TextBox Name ="NameBlock" Text="{Binding AuthName}"/>
+            <TextBlock Text="Фамилия автора"/>
+            <TextBox Name ="LastnameBlock" Text="{Binding AuthLastname }"/>
+            <TextBlock Text="Отчество автора"/>
+            <TextBox Name ="PatroBlock" Text="{Binding AuthPatro }"/>
+            <TextBlock Text="Дата рождения автора"/>
+            <TextBox Name ="DateBlock" Text="{Binding DateOfBirth }"/>
+            <TextBlock Text="Название книги"/>
+            <TextBox Name ="BookBlock" Text="{Binding BookName }"/>
+            <TextBlock Text="Год написания"/>
+            <TextBox Name ="YearBlock" Text="{Binding YearOfCreate }"/>
+        </StackPanel>
+        <Button Grid.Row="1" Content="Добавить книгу" 
+                Command="{Binding AddNewBook}"
+                CommandParameter="{Binding ElementName=AddNewBookWnd}"/>
+    </Grid>
+</Window>

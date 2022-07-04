@@ -1,0 +1,67 @@
+﻿<Window x:Class="Task2.View.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+         
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="50"/>
+        </Grid.RowDefinitions>
+        <TabControl Grid.Row="0" SelectedIndex="0">
+            <TabItem Name="BookTab">
+                <TabItem.Header>
+                    <TextBlock Text="Book"/>
+                </TabItem.Header>
+                <TabItem.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Редактировать" Command="{Binding OpenEditItemWnd}"/>
+                        <MenuItem Header="Удалить" Command="{Binding DeleteItem}"/>
+                    </ContextMenu>
+                </TabItem.ContextMenu>
+                <ListView x:Name="ViewAllBooks" ItemsSource="{Binding AllBooks}"
+                            SelectedItem="{Binding SelectedBook}">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Имя"
+                                    DisplayMemberBinding="{Binding Path=Name}"/>
+                            <GridViewColumn Header="Фамилия"
+                                    DisplayMemberBinding="{Binding Path=Lastname}"/>
+                            <GridViewColumn Header="Отчество"
+                                    DisplayMemberBinding="{Binding Path=Patro}"/>
+                            <GridViewColumn Header="ДатаРождения"
+                                    DisplayMemberBinding="{Binding Path=BirthDate}"/>
+                            <GridViewColumn Header="НазваниеКниги"
+                                    DisplayMemberBinding="{Binding Path=BookName}"/>
+                            <GridViewColumn Header="ГодНаписания"
+                                    DisplayMemberBinding="{Binding Path=Year}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+        </TabControl>
+        <StackPanel Grid.Row="1" Orientation="Horizontal"
+                    HorizontalAlignment="Left">
+            <Button Content="Добавить книгу" 
+                    Command="{Binding OpenAddNewBookWnd}"/>
+            <Button Content="Загрузить из CSV" 
+                    Command="{Binding OpenFileWnd}"/>
+            <Button Content="Выгрузить в CSV" 
+                    Command="{Binding OpenExportWnd}"/>
+            <Button Content="Выгрузить в XML" 
+                    Command="{Binding XmlExport}"/>
+            <Button Content="Найти книгу" 
+                    Command="{Binding OpenFilterWnd}"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="prev page" 
+                    Command="{Binding PrevPage}"/>
+            <Button Content="next page" 
+                    Command="{Binding NextPage}"/>
+        </StackPanel>
+    </Grid>
+</Window>
