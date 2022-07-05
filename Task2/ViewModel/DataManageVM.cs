@@ -15,29 +15,32 @@ using Microsoft.Win32;
 using System.IO;
 using LINQtoCSV;
 using System.Xml.Linq;
+using System.Collections.ObjectModel;
 
 namespace Task2.ViewModel
 {
-    public class DataManageVM : INotifyPropertyChanged
+    public class DataManageVM
     {
-        private List<Books> allBooks = DataWorker.GetBooks(skip, pageSize);
-        public List<Books> AllBooks
+        public static DataRepository db = new DataRepository();
+
+        private ObservableCollection<Books> allBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+        public ObservableCollection<Books> AllBooks
         {
             get { return allBooks; }
             set
             {
                 allBooks = value;
-                NotifyPropertyChanged("AllBooks");
+                UpdateAllBooksView(AllBooks);
             }
         }
-        private List<Books> filterBooks = DataWorker.FindBooks(BName);
-        public List<Books> FilterBooks
+        private ObservableCollection<Books> filterBooks = new ObservableCollection<Books>(db.FindBooks(BName));
+        public ObservableCollection<Books> FilterBooks
         {
             get { return filterBooks; }
             set
             {
                 filterBooks = value;
-                NotifyPropertyChanged("FilterBooks");
+                UpdateAllBooksView(FilterBooks);
             }
         }
 
@@ -46,7 +49,7 @@ namespace Task2.ViewModel
         public static string AuthLastname { get; set; }
         public static string AuthPatro { get; set; }
         public static DateTime? DateOfBirth { get; set; }
-        public static string BookName { get; set; }
+        public static string bookName { get; set; }
         public static int? YearOfCreate { get; set; }
         public static string BName { get; set; }
         public static int PageCounter = 1;
@@ -65,8 +68,12 @@ namespace Task2.ViewModel
         public readonly string NotSelected = "Ничего не выбрано";
         public readonly string NoMorePages = "Страниц больше нет!";
         public readonly string BookNotSelected = "Не выбрана книга";
+        public readonly string BookSucCreated = "Книга успешно добавлена";
+        public readonly string BookNotCreated = "Такая книга уже существует!";
+        public readonly string BookDoesNotExist = "Такой книги не существует!";
 
         public readonly string xmlPath = @"C:\Source\Book_xml.xml";
+        public readonly string csvPath = @"C:\Source\Book_exp.csv";
         public readonly string csvFilter = "Csvfiles|*.csv";
         public readonly string csvDefault = ".csv";
         public readonly static string csvExportPath = @"C:\Source\Book_exp.csv";
@@ -102,7 +109,7 @@ namespace Task2.ViewModel
                     {
                         SetRedBlockControl(wnd, DateBlock);
                     }
-                    else if (BookName == null || BookName.Replace(" ", "").Length == 0)
+                    else if (bookName == null || bookName.Replace(" ", "").Length == 0)
                     {
                         SetRedBlockControl(wnd, BookBlock);
                     }
@@ -112,11 +119,20 @@ namespace Task2.ViewModel
                     }
                     else
                     {
-                        resultStr = DataWorker.CreateBook(AuthName, AuthLastname, AuthPatro, DateOfBirth, BookName, YearOfCreate);
-                        UpdateAllBooksView();
+                        Books book = new Books { Name = AuthName, Lastname = AuthLastname, Patro = AuthPatro, BirthDate = DateOfBirth, BookName = bookName, Year = YearOfCreate };
+                        bool checkIsExist = db.HasBooks(bookName);
+                        if (!checkIsExist)
+                        {
+                            db.AddBook(book);
+                            AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+                            resultStr = BookSucCreated;
+                            SetNullValuesToProperties();
+                            wnd.Close();
+                        } else
+                        {
+                            resultStr = BookNotCreated;
+                        }
                         ShowMessageToUser(resultStr);
-                        SetNullValuesToProperties();
-                        wnd.Close();
                     }
                 });
             }
@@ -133,8 +149,9 @@ namespace Task2.ViewModel
                     string resultStr = NotSelected;
                     if(SelectedBook != null)
                     {
-                        resultStr = DataWorker.RemoveBook(SelectedBook);
-                        UpdateAllBooksView();
+                        db.RemoveBook(SelectedBook);
+                        resultStr = "Done! Книга " + SelectedBook.BookName + " успешно удалена";
+                        AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
                     }
                     SetNullValuesToProperties();
                     ShowMessageToUser(resultStr);
@@ -156,7 +173,7 @@ namespace Task2.ViewModel
                     }
                     else
                     {
-                        UpdateAllFilteredBooksView();
+                        FilterBooks = new ObservableCollection<Books>(db.FindBooks(BName));
                         wnd.Close();
                     }
                 });
@@ -170,14 +187,14 @@ namespace Task2.ViewModel
             {
                 return nextPage ?? new RelayCommand(obj => 
                 {
+                    BName = null;
                     PageCounter++;
-                    var total = DataWorker.CountOfBooks();
+                    var total = db.GetBooks().Count();
                     skip = pageSize * (PageCounter - 1);
                     var canPage = skip < total;
                     if (canPage)
                     {
-                        DataWorker.GetBooks(skip, pageSize);
-                        UpdateAllBooksView();
+                        AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
                     }
                     else
                     {
@@ -195,6 +212,7 @@ namespace Task2.ViewModel
             {
                 return nextPage ?? new RelayCommand(obj =>
                 {
+                    BName = null;
                     PageCounter--;
                     if (skip == 0)
                         PageCounter++;
@@ -202,8 +220,7 @@ namespace Task2.ViewModel
                     var canPage = skip >= 0;
                     if (canPage)
                     {
-                        DataWorker.GetBooks(skip, pageSize);
-                        UpdateAllBooksView();
+                        AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
                     }
                 });
             }
@@ -219,11 +236,11 @@ namespace Task2.ViewModel
                     var bookstoexp = new List<Books>();
                     if (BName != null)
                     {
-                        bookstoexp = DataWorker.FindBooks(BName);
+                        bookstoexp = db.FindBooks(BName);
                     }
                     else
                     {
-                        bookstoexp = DataWorker.GetBooks(skip, pageSize);
+                        bookstoexp = db.GetBooks().Skip(skip).Take(pageSize).ToList();
                     }
                     XDocument xdoc = new XDocument();
                     XElement xbooks = new XElement("TestProgram");
@@ -276,7 +293,7 @@ namespace Task2.ViewModel
                         {
                             SetRedBlockControl(wnd, DateBlock);
                         }
-                        else if (BookName == null || BookName.Replace(" ", "").Length == 0)
+                        else if (bookName == null || bookName.Replace(" ", "").Length == 0)
                         {
                             SetRedBlockControl(wnd, BookBlock);
                         }
@@ -286,11 +303,18 @@ namespace Task2.ViewModel
                         }
                         else
                         {
-                            resultStr = DataWorker.EditBook(SelectedBook, AuthName, AuthLastname, AuthPatro, DateOfBirth, BookName, YearOfCreate);
-                            UpdateAllBooksView();
-                            SetNullValuesToProperties();
+                            Books book = db.FindFirstBook(SelectedBook);
+                            resultStr = BookDoesNotExist;
+                            if (book != null)
+                            {
+                                db.EditBook(book, AuthName, AuthLastname, AuthPatro, DateOfBirth, bookName, YearOfCreate);
+                                resultStr = "Done! Книга " + book.BookName + " успешно изменена";
+                                //                                UpdateAllBooksView();
+                                AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+                                SetNullValuesToProperties();
+                                wnd.Close();
+                            }
                             ShowMessageToUser(resultStr);
-                            wnd.Close();
                         }
                     }
                     else ShowMessageToUser(resultStr);
@@ -333,10 +357,10 @@ namespace Task2.ViewModel
         {
             get
             {
-                return openFileWnd ?? new RelayCommand(obj =>
+                return openFileWnd ?? new RelayCommand(async obj =>
                 {
-                    OpenFileWindowMethod();
-                    UpdateAllBooksView();
+                    await OpenFileWindowMethodAsync();
+                    AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
                 });
             }
         }
@@ -373,19 +397,19 @@ namespace Task2.ViewModel
             SetCenterPositionAndOpen(newBookWindow);
         }
 
-        private void OpenFileWindowMethod()
+        private async Task OpenFileWindowMethodAsync()
         {
             OpenFileDialog fileDialog = new OpenFileDialog();
             fileDialog.Filter = csvFilter;
             fileDialog.DefaultExt = csvDefault;
-            Nullable<bool> dialogOK = fileDialog.ShowDialog();
+            bool? dialogOK = fileDialog.ShowDialog();
 
             if (dialogOK == true)
             {
                 var sFilename = fileDialog.FileName;
                 try
                 {
-                    DataWorker.CreateBookExcel(sFilename);
+                    await Task.Run(() => ReadExcel(sFilename));
                     ShowMessageToUser(SuccessfullyUploaded);
                 }
                 catch
@@ -398,14 +422,13 @@ namespace Task2.ViewModel
         private static void ExportFileWindowMethod()
         {
             var bookstoexp = new List<Books>();
-//            bookstoexp = DataWorker.GetBooks();
             if (BName != null)
             {
-                bookstoexp = DataWorker.FindBooks(BName);
+                bookstoexp = db.FindBooks(BName);
             }
             else
             {
-                bookstoexp = DataWorker.GetBooks(skip, pageSize);
+                bookstoexp = (List<Books>)db.GetBooks().Skip(skip).Take(pageSize);
             }
 
             var csvFileDescription = new CsvFileDescription
@@ -417,7 +440,7 @@ namespace Task2.ViewModel
 
             var csvContext = new CsvContext();
             csvContext.Write(bookstoexp, csvExportPath, csvFileDescription);
-            BName = null;
+//            BName = null;
         }
 
         private void OpenEditBookWindowMethod(Books book)
@@ -454,32 +477,49 @@ namespace Task2.ViewModel
             AuthLastname = null;
             AuthPatro = null;
             DateOfBirth = null; 
-            BookName = null;
+            bookName = null;
             YearOfCreate = null;
         }
-        private void UpdateAllBooksView()
-        {
-            AllBooks = DataWorker.GetBooks(skip, pageSize);
-            MainWindow.AllBooksView.ItemsSource = null;
-            MainWindow.AllBooksView.Items.Clear();
-            MainWindow.AllBooksView.ItemsSource = AllBooks;
-            MainWindow.AllBooksView.Items.Refresh();
-        }
-        private void UpdateAllFilteredBooksView()
-        {
-            FilterBooks = DataWorker.FindBooks(BName);
-            MainWindow.AllBooksView.ItemsSource = null;
-            MainWindow.AllBooksView.Items.Clear();
-            MainWindow.AllBooksView.ItemsSource = FilterBooks;
-            MainWindow.AllBooksView.Items.Refresh();
-        }
 
+        private void UpdateAllBooksView(ObservableCollection<Books> ISource)
+        {
+//            AllBooks = db.GetBooks().Skip(skip).Take(pageSize).ToList();
+            MainWindow.AllBooksView.ItemsSource = null;
+            MainWindow.AllBooksView.Items.Clear();
+            MainWindow.AllBooksView.ItemsSource = ISource;
+            MainWindow.AllBooksView.Items.Refresh();
+        }
         #endregion
         private void ShowMessageToUser(string message)
         {
             MessageView messageView = new MessageView(message);
             SetCenterPositionAndOpen(messageView);
         }
+
+        private void ReadExcel(string Filename)
+        {
+            bool is_first_row = true;
+            //читаем эксель
+            using (StreamReader reader = new StreamReader(Filename))
+            {
+                // построчно заносим данные в бд
+                while (!reader.EndOfStream)
+                {
+                    var line = reader.ReadLine();
+                    if (is_first_row == false)
+                    {
+                        var values = line.Split(';');
+                        if (values.Count() > 5)
+                        {
+                            Books book = new Books { Name = values[0], Lastname = values[1], Patro = values[2], BirthDate = DateTime.Parse(values[3]), BookName = values[4], Year = Int32.Parse(values[5]) };
+                            db.AddBook(book);
+                        }
+                    }
+                    is_first_row = false;
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
         private void NotifyPropertyChanged(string propertyName)
         {

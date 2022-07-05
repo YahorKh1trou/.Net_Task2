@@ -8,12 +8,12 @@ namespace Task2.Model.Data
 {
     public interface IDataRepository
     {
-        List<Books> AddBook(Books book, string name);
-        List<Books> AddBookExcel(string path);
-        List<Books> GetBooks(int skip, int take);
-        List<Books> RemoveBook(Books book);
+        void AddBook(Books book);
+        List<Books> GetBooks();
+        void RemoveBook(Books book);
         List<Books> FindBooks(string bookname);
-        int CountOfBooks();
-        List<Books> EditBook(Books book, Books oldBook, string newName, string newLastname, string newPatro, DateTime? newBitrhdate, string newBookname, int? newYear);
+        bool HasBooks(string bookname);
+        Books FindFirstBook(Books oldBook);
+        void EditBook(Books book, string newName, string newLastname, string newPatro, DateTime? newBitrhdate, string newBookname, int? newYear);
     }
 }

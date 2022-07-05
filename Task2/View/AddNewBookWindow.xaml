@@ -25,7 +25,7 @@
             <TextBlock Text="Дата рождения автора"/>
             <TextBox Name ="DateBlock" Text="{Binding DateOfBirth }"/>
             <TextBlock Text="Название книги"/>
-            <TextBox Name ="BookBlock" Text="{Binding BookName }"/>
+            <TextBox Name ="BookBlock" Text="{Binding bookName }"/>
             <TextBlock Text="Год написания"/>
             <TextBox Name ="YearBlock" Text="{Binding YearOfCreate }"/>
         </StackPanel>

@@ -30,7 +30,7 @@ namespace Task2.View
             DataManageVM.AuthLastname = bookToEdit.Lastname;
             DataManageVM.AuthPatro = bookToEdit.Patro;
             DataManageVM.DateOfBirth = bookToEdit.BirthDate;
-            DataManageVM.BookName = bookToEdit.BookName;
+            DataManageVM.bookName = bookToEdit.BookName;
             DataManageVM.YearOfCreate = bookToEdit.Year;
         }
     }
