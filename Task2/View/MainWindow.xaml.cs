@@ -11,12 +11,12 @@ namespace Task2.View
     /// </summary>
     public partial class MainWindow : Window
     {
-        public static ListView AllBooksView;
+//        public static ListView AllBooksView;
         public MainWindow()
         {
             InitializeComponent();
             DataContext = new DataManageVM();
-            AllBooksView = ViewAllBooks;
+            //            AllBooksView = ViewAllBooks;
         }
     }
 }

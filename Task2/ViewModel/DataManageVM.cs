@@ -19,20 +19,22 @@ using System.Collections.ObjectModel;
 
 namespace Task2.ViewModel
 {
-    public class DataManageVM
+    public class DataManageVM : INotifyPropertyChanged
     {
         public static DataRepository db = new DataRepository();
 
         private ObservableCollection<Books> allBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
         public ObservableCollection<Books> AllBooks
+
         {
             get { return allBooks; }
             set
             {
                 allBooks = value;
-                UpdateAllBooksView(AllBooks);
+                NotifyPropertyChanged("AllBooks");
             }
         }
+
         private ObservableCollection<Books> filterBooks = new ObservableCollection<Books>(db.FindBooks(BName));
         public ObservableCollection<Books> FilterBooks
         {
@@ -40,7 +42,8 @@ namespace Task2.ViewModel
             set
             {
                 filterBooks = value;
-                UpdateAllBooksView(FilterBooks);
+//                NotifyPropertyChanged("AllBooks");
+                //                UpdateAllBooksView(FilterBooks);
             }
         }
 
@@ -84,12 +87,11 @@ namespace Task2.ViewModel
         public static Books SelectedBook { get; set; }
 
         #region COMMANDS TO ADD
-        private RelayCommand addNewBook;
         public RelayCommand AddNewBook
         {
             get 
             {
-                return addNewBook ?? new RelayCommand(obj =>
+                return new RelayCommand(obj =>
                 {
                     Window wnd = obj as Window;
                     string resultStr = "";
@@ -124,7 +126,7 @@ namespace Task2.ViewModel
                         if (!checkIsExist)
                         {
                             db.AddBook(book);
-                            AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+                            GetterForUpdate();
                             resultStr = BookSucCreated;
                             SetNullValuesToProperties();
                             wnd.Close();
@@ -139,19 +141,18 @@ namespace Task2.ViewModel
         }
         #endregion
 
-        private RelayCommand deleteItem;
         public RelayCommand DeleteItem
         {
             get
             {
-                return deleteItem ?? new RelayCommand(obj => 
+                return new RelayCommand(obj => 
                 {
                     string resultStr = NotSelected;
                     if(SelectedBook != null)
                     {
                         db.RemoveBook(SelectedBook);
                         resultStr = "Done! Книга " + SelectedBook.BookName + " успешно удалена";
-                        AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+                        GetterForUpdate();
                     }
                     SetNullValuesToProperties();
                     ShowMessageToUser(resultStr);
@@ -159,12 +160,11 @@ namespace Task2.ViewModel
             }
         }
 
-        private RelayCommand filterBook;
         public RelayCommand FilterBook
         {
             get
             {
-                return filterBook ?? new RelayCommand(obj => 
+                return new RelayCommand(obj => 
                 {
                     Window wnd = obj as Window;
                     if (BName == null || BName.Replace(" ", "").Length == 0)
@@ -180,12 +180,11 @@ namespace Task2.ViewModel
             }
         }
 
-        private RelayCommand nextPage;
         public RelayCommand NextPage
         {
             get
             {
-                return nextPage ?? new RelayCommand(obj => 
+                return new RelayCommand(obj => 
                 {
                     BName = null;
                     PageCounter++;
@@ -194,7 +193,7 @@ namespace Task2.ViewModel
                     var canPage = skip < total;
                     if (canPage)
                     {
-                        AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+                        GetterForUpdate();
                     }
                     else
                     {
@@ -205,12 +204,11 @@ namespace Task2.ViewModel
             }
         }
 
-        private RelayCommand prevPage;
         public RelayCommand PrevPage
         {
             get
             {
-                return nextPage ?? new RelayCommand(obj =>
+                return new RelayCommand(obj =>
                 {
                     BName = null;
                     PageCounter--;
@@ -220,18 +218,16 @@ namespace Task2.ViewModel
                     var canPage = skip >= 0;
                     if (canPage)
                     {
-                        AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+                        GetterForUpdate();
                     }
                 });
             }
         }
-
-        private RelayCommand xmlExport;
         public RelayCommand XmlExport
         {
             get
             {
-                return xmlExport ?? new RelayCommand(obj => 
+                return new RelayCommand(obj => 
                 {
                     var bookstoexp = new List<Books>();
                     if (BName != null)
@@ -266,12 +262,11 @@ namespace Task2.ViewModel
             }
         }
         #region EDIT COMMANDS
-        private RelayCommand editBook;
         public RelayCommand EditBook
         {
             get
             {
-                return editBook ?? new RelayCommand(obj =>
+                return new RelayCommand(obj =>
                 {
                     Window wnd = obj as Window;
                     string resultStr = BookNotSelected;
@@ -309,8 +304,8 @@ namespace Task2.ViewModel
                             {
                                 db.EditBook(book, AuthName, AuthLastname, AuthPatro, DateOfBirth, bookName, YearOfCreate);
                                 resultStr = "Done! Книга " + book.BookName + " успешно изменена";
-                                //                                UpdateAllBooksView();
-                                AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+                                GetterForUpdate();
+//                                NotifyPropertyChanged("AllBooks");
                                 SetNullValuesToProperties();
                                 wnd.Close();
                             }
@@ -324,24 +319,22 @@ namespace Task2.ViewModel
         #endregion
 
         #region COMMANDS TO OPEN WINDOWS
-        private RelayCommand openAddNewBookWnd;
         public RelayCommand OpenAddNewBookWnd
         {
             get 
             {
-                return openAddNewBookWnd ?? new RelayCommand(obj =>
+                return new RelayCommand(obj =>
                     {
                         SetNullValuesToProperties();
                         OpenAddBookWindowMethod();
                     });
             }
         }
-        private RelayCommand openEditItemWnd;
         public RelayCommand OpenEditItemWnd
         {
             get
             {
-                return openEditItemWnd ?? new RelayCommand(obj =>
+                return new RelayCommand(obj =>
                 {
                     string resultStr = BookNotSelected;
                     if (SelectedBook != null)
@@ -352,36 +345,33 @@ namespace Task2.ViewModel
             }
 
         }
-        private RelayCommand openFileWnd;
         public RelayCommand OpenFileWnd
         {
             get
             {
-                return openFileWnd ?? new RelayCommand(async obj =>
+                return new RelayCommand(async obj =>
                 {
                     await OpenFileWindowMethodAsync();
-                    AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+                    GetterForUpdate();
                 });
             }
         }
-        public RelayCommand openExportWnd;
         public RelayCommand OpenExportWnd
         {
             get
             {
-                return openExportWnd ?? new RelayCommand(obj =>
+                return new RelayCommand(obj =>
                 {
                     ExportFileWindowMethod();
                     ShowMessageToUser(SuccessfullyUnloaded);
                 });
             }
         }
-        public RelayCommand openFilterWnd;
         public RelayCommand OpenFilterWnd
         {
             get
             {
-                return openFileWnd ?? new RelayCommand(obj =>
+                return new RelayCommand(obj =>
                 {
                     OpenFilterWindowMethod();
                 });
@@ -428,7 +418,7 @@ namespace Task2.ViewModel
             }
             else
             {
-                bookstoexp = (List<Books>)db.GetBooks().Skip(skip).Take(pageSize);
+                bookstoexp = db.GetBooks().Skip(skip).Take(pageSize).ToList();
             }
 
             var csvFileDescription = new CsvFileDescription
@@ -480,7 +470,7 @@ namespace Task2.ViewModel
             bookName = null;
             YearOfCreate = null;
         }
-
+/*
         private void UpdateAllBooksView(ObservableCollection<Books> ISource)
         {
 //            AllBooks = db.GetBooks().Skip(skip).Take(pageSize).ToList();
@@ -489,6 +479,7 @@ namespace Task2.ViewModel
             MainWindow.AllBooksView.ItemsSource = ISource;
             MainWindow.AllBooksView.Items.Refresh();
         }
+*/
         #endregion
         private void ShowMessageToUser(string message)
         {
@@ -518,6 +509,11 @@ namespace Task2.ViewModel
                     is_first_row = false;
                 }
             }
+        }
+
+        private void GetterForUpdate()
+        {
+            AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
