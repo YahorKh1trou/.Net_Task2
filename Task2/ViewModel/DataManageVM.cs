@@ -16,37 +16,27 @@ using System.IO;
 using LINQtoCSV;
 using System.Xml.Linq;
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Task2.ViewModel
 {
     public class DataManageVM : INotifyPropertyChanged
     {
         public static DataRepository db = new DataRepository();
-
-        private ObservableCollection<Books> allBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
-        public ObservableCollection<Books> AllBooks
-
+        public List<Books> AllBooks
         {
-            get { return allBooks; }
-            set
+            get 
             {
-                allBooks = value;
-                NotifyPropertyChanged("AllBooks");
+                if (BName == null)
+                {
+                    return GetData();
+                } else
+                {
+                    return db.FindBooks(BName).ToList();
+                }
             }
         }
-
-        private ObservableCollection<Books> filterBooks = new ObservableCollection<Books>(db.FindBooks(BName));
-        public ObservableCollection<Books> FilterBooks
-        {
-            get { return filterBooks; }
-            set
-            {
-                filterBooks = value;
-//                NotifyPropertyChanged("AllBooks");
-                //                UpdateAllBooksView(FilterBooks);
-            }
-        }
-
         //Свойства для книг
         public static string AuthName { get; set; }
         public static string AuthLastname { get; set; }
@@ -55,9 +45,28 @@ namespace Task2.ViewModel
         public static string bookName { get; set; }
         public static int? YearOfCreate { get; set; }
         public static string BName { get; set; }
-        public static int PageCounter = 1;
+        public static int PageCounter = 0;
         public static int pageSize = 14;
-        public static int skip;
+        public static bool hasNext
+        {
+            get
+            {
+                if (pageSize * PageCounter < db.GetBooks().Count() - pageSize)
+                {
+                    return true;
+                } else
+                {
+                    return false;
+                }
+            }
+        }
+        public static bool hasPrev
+        {
+            get
+            {
+                return PageCounter > 0;
+            }
+        }
 
         //Строковые константы
         public readonly string NameBlock = "NameBlock";
@@ -126,7 +135,6 @@ namespace Task2.ViewModel
                         if (!checkIsExist)
                         {
                             db.AddBook(book);
-                            GetterForUpdate();
                             resultStr = BookSucCreated;
                             SetNullValuesToProperties();
                             wnd.Close();
@@ -152,7 +160,7 @@ namespace Task2.ViewModel
                     {
                         db.RemoveBook(SelectedBook);
                         resultStr = "Done! Книга " + SelectedBook.BookName + " успешно удалена";
-                        GetterForUpdate();
+                        NotifyPropertyChanged("AllBooks");
                     }
                     SetNullValuesToProperties();
                     ShowMessageToUser(resultStr);
@@ -173,7 +181,6 @@ namespace Task2.ViewModel
                     }
                     else
                     {
-                        FilterBooks = new ObservableCollection<Books>(db.FindBooks(BName));
                         wnd.Close();
                     }
                 });
@@ -187,17 +194,12 @@ namespace Task2.ViewModel
                 return new RelayCommand(obj => 
                 {
                     BName = null;
-                    PageCounter++;
-                    var total = db.GetBooks().Count();
-                    skip = pageSize * (PageCounter - 1);
-                    var canPage = skip < total;
-                    if (canPage)
+                    if (hasNext == true)
                     {
-                        GetterForUpdate();
-                    }
-                    else
+                        PageCounter++;
+                        NotifyPropertyChanged("AllBooks");
+                    } else
                     {
-                        PageCounter--;
                         ShowMessageToUser(NoMorePages);
                     }
                 });
@@ -211,14 +213,13 @@ namespace Task2.ViewModel
                 return new RelayCommand(obj =>
                 {
                     BName = null;
-                    PageCounter--;
-                    if (skip == 0)
-                        PageCounter++;
-                    skip = pageSize * (PageCounter - 1);
-                    var canPage = skip >= 0;
-                    if (canPage)
+                    if (hasPrev == true)
                     {
-                        GetterForUpdate();
+                        PageCounter--;
+                        NotifyPropertyChanged("AllBooks");
+                    } else
+                    {
+                        PageCounter = 0;
                     }
                 });
             }
@@ -236,7 +237,7 @@ namespace Task2.ViewModel
                     }
                     else
                     {
-                        bookstoexp = db.GetBooks().Skip(skip).Take(pageSize).ToList();
+                        bookstoexp = GetData();
                     }
                     XDocument xdoc = new XDocument();
                     XElement xbooks = new XElement("TestProgram");
@@ -304,8 +305,6 @@ namespace Task2.ViewModel
                             {
                                 db.EditBook(book, AuthName, AuthLastname, AuthPatro, DateOfBirth, bookName, YearOfCreate);
                                 resultStr = "Done! Книга " + book.BookName + " успешно изменена";
-                                GetterForUpdate();
-//                                NotifyPropertyChanged("AllBooks");
                                 SetNullValuesToProperties();
                                 wnd.Close();
                             }
@@ -327,6 +326,7 @@ namespace Task2.ViewModel
                     {
                         SetNullValuesToProperties();
                         OpenAddBookWindowMethod();
+                        NotifyPropertyChanged("AllBooks");
                     });
             }
         }
@@ -352,7 +352,7 @@ namespace Task2.ViewModel
                 return new RelayCommand(async obj =>
                 {
                     await OpenFileWindowMethodAsync();
-                    GetterForUpdate();
+                    NotifyPropertyChanged("AllBooks");
                 });
             }
         }
@@ -374,6 +374,7 @@ namespace Task2.ViewModel
                 return new RelayCommand(obj =>
                 {
                     OpenFilterWindowMethod();
+                    NotifyPropertyChanged("AllBooks");
                 });
             }
         }
@@ -418,7 +419,7 @@ namespace Task2.ViewModel
             }
             else
             {
-                bookstoexp = db.GetBooks().Skip(skip).Take(pageSize).ToList();
+                bookstoexp = GetData();
             }
 
             var csvFileDescription = new CsvFileDescription
@@ -470,16 +471,7 @@ namespace Task2.ViewModel
             bookName = null;
             YearOfCreate = null;
         }
-/*
-        private void UpdateAllBooksView(ObservableCollection<Books> ISource)
-        {
-//            AllBooks = db.GetBooks().Skip(skip).Take(pageSize).ToList();
-            MainWindow.AllBooksView.ItemsSource = null;
-            MainWindow.AllBooksView.Items.Clear();
-            MainWindow.AllBooksView.ItemsSource = ISource;
-            MainWindow.AllBooksView.Items.Refresh();
-        }
-*/
+
         #endregion
         private void ShowMessageToUser(string message)
         {
@@ -511,13 +503,13 @@ namespace Task2.ViewModel
             }
         }
 
-        private void GetterForUpdate()
+        private static List<Books> GetData()
         {
-            AllBooks = new ObservableCollection<Books>(db.GetBooks().Skip(skip).Take(pageSize));
+            return db.GetBooks().Skip(pageSize * PageCounter).Take(pageSize).ToList();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
-        private void NotifyPropertyChanged(string propertyName)
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
         {
             if (PropertyChanged != null)
             {
