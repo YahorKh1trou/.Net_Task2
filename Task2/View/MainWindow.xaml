@@ -58,9 +58,14 @@
         </StackPanel>
         <StackPanel Grid.Row="1" Orientation="Horizontal"
                     HorizontalAlignment="Right">
-            <Button Content="prev page" 
+            <Button Content="Сбросить фильтр"
+                    IsEnabled="{Binding IsBusy}"
+                    Command="{Binding ResetFilter}"/>
+            <Button Content="prev page"
+                    IsEnabled="{Binding hasPrev}"
                     Command="{Binding PrevPage}"/>
-            <Button Content="next page" 
+            <Button Content="next page"
+                    IsEnabled="{Binding hasNext}"
                     Command="{Binding NextPage}"/>
         </StackPanel>
     </Grid>

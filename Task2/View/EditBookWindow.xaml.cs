@@ -21,17 +21,10 @@ namespace Task2.View
     /// </summary>
     public partial class EditBookWindow : Window
     {
-        public EditBookWindow(Books bookToEdit)
+        public EditBookWindow()
         {
             InitializeComponent();
             DataContext = new DataManageVM();
-            DataManageVM.SelectedBook = bookToEdit;
-            DataManageVM.AuthName = bookToEdit.Name;
-            DataManageVM.AuthLastname = bookToEdit.Lastname;
-            DataManageVM.AuthPatro = bookToEdit.Patro;
-            DataManageVM.DateOfBirth = bookToEdit.BirthDate;
-            DataManageVM.bookName = bookToEdit.BookName;
-            DataManageVM.YearOfCreate = bookToEdit.Year;
         }
     }
 }

@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Task2.Model;
 using Task2.View;
-using Task2.ViewModel;
 using Task2.Model.Data;
 using System.ComponentModel;
 using System.Windows;
@@ -18,6 +17,7 @@ using System.Xml.Linq;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Task2.ViewModel
 {
@@ -28,39 +28,35 @@ namespace Task2.ViewModel
         {
             get 
             {
-                if (BName == null)
-                {
-                    return GetData();
-                } else
-                {
-                    return db.FindBooks(BName).ToList();
-                }
+                return GetData();
             }
         }
         //Свойства для книг
-        public static string AuthName { get; set; }
-        public static string AuthLastname { get; set; }
-        public static string AuthPatro { get; set; }
-        public static DateTime? DateOfBirth { get; set; }
-        public static string bookName { get; set; }
-        public static int? YearOfCreate { get; set; }
-        public static string BName { get; set; }
+        public string AuthName { get; set; } = SelectedBook?.Name;
+        public string AuthLastname { get; set; } = SelectedBook?.Lastname;
+        public string AuthPatro { get; set; } = SelectedBook?.Patro;
+        public DateTime? DateOfBirth { get; set; } = SelectedBook?.BirthDate;
+        public string bookName { get; set; } = SelectedBook?.BookName;
+        public int? YearOfCreate { get; set; } = SelectedBook?.Year;
+        public static string? SearchBookName { get; set; }
+
         public static int PageCounter = 0;
         public static int pageSize = 14;
-        public static bool hasNext
+        public bool IsBusy
         {
             get
             {
-                if (pageSize * PageCounter < db.GetBooks().Count() - pageSize)
-                {
-                    return true;
-                } else
-                {
-                    return false;
-                }
+                return SearchBookName != null;
             }
         }
-        public static bool hasPrev
+        public bool hasNext
+        {
+            get
+            {
+                return pageSize * PageCounter < GetCountBooks() - pageSize;
+            }
+        }
+        public bool hasPrev
         {
             get
             {
@@ -88,19 +84,20 @@ namespace Task2.ViewModel
         public readonly string csvPath = @"C:\Source\Book_exp.csv";
         public readonly string csvFilter = "Csvfiles|*.csv";
         public readonly string csvDefault = ".csv";
-        public readonly static string csvExportPath = @"C:\Source\Book_exp.csv";
+        public readonly string csvExportPath = @"C:\Source\Book_exp.csv";
         public readonly string fileError = "Возникла ошибка! Выберите подходящий файл.";
         public readonly string SuccessfullyUnloaded = "Файл успешно выгружен";
         public readonly string SuccessfullyUploaded = "Файл успешно загружен";
         //Свойства для выделенных элементов
-        public static Books SelectedBook { get; set; }
+        public static Books? SelectedBook { get; set; }
 
         #region COMMANDS TO ADD
+        private RelayCommand addNewBook;
         public RelayCommand AddNewBook
         {
             get 
             {
-                return new RelayCommand(obj =>
+                return addNewBook ?? (addNewBook =  new RelayCommand(obj =>
                 {
                     Window wnd = obj as Window;
                     string resultStr = "";
@@ -136,7 +133,6 @@ namespace Task2.ViewModel
                         {
                             db.AddBook(book);
                             resultStr = BookSucCreated;
-                            SetNullValuesToProperties();
                             wnd.Close();
                         } else
                         {
@@ -144,101 +140,94 @@ namespace Task2.ViewModel
                         }
                         ShowMessageToUser(resultStr);
                     }
-                });
+                }));
             }
         }
         #endregion
-
+        private RelayCommand deleteItem;
         public RelayCommand DeleteItem
         {
             get
             {
-                return new RelayCommand(obj => 
+                return deleteItem ?? (deleteItem = new RelayCommand(obj => 
                 {
                     string resultStr = NotSelected;
                     if(SelectedBook != null)
                     {
                         db.RemoveBook(SelectedBook);
                         resultStr = "Done! Книга " + SelectedBook.BookName + " успешно удалена";
-                        NotifyPropertyChanged("AllBooks");
+                        NotifyPropertyChanged(nameof(AllBooks));
                     }
-                    SetNullValuesToProperties();
                     ShowMessageToUser(resultStr);
-                });
+                }));
             }
         }
-
+        private RelayCommand filterBook;
         public RelayCommand FilterBook
         {
             get
             {
-                return new RelayCommand(obj => 
+                return filterBook ?? (filterBook = new RelayCommand(obj => 
                 {
                     Window wnd = obj as Window;
-                    if (BName == null || BName.Replace(" ", "").Length == 0)
+                    if (SearchBookName == null || SearchBookName.Replace(" ", "").Length == 0)
                     {
                         SetRedBlockControl(wnd, BNameBlock);
                     }
                     else
                     {
+                        PageCounter = 0;
                         wnd.Close();
                     }
-                });
+                }));
             }
         }
-
+        private RelayCommand nextPage;
         public RelayCommand NextPage
         {
             get
             {
-                return new RelayCommand(obj => 
+                return nextPage ?? (nextPage = new RelayCommand(obj => 
                 {
-                    BName = null;
-                    if (hasNext == true)
-                    {
-                        PageCounter++;
-                        NotifyPropertyChanged("AllBooks");
-                    } else
-                    {
-                        ShowMessageToUser(NoMorePages);
-                    }
-                });
+                    PageCounter++;
+                    NotifyMain();
+                }));
             }
         }
-
+        private RelayCommand prevPage;
         public RelayCommand PrevPage
         {
             get
             {
-                return new RelayCommand(obj =>
+                return prevPage ?? (prevPage = new RelayCommand(obj =>
                 {
-                    BName = null;
-                    if (hasPrev == true)
-                    {
-                        PageCounter--;
-                        NotifyPropertyChanged("AllBooks");
-                    } else
-                    {
-                        PageCounter = 0;
-                    }
-                });
+                    PageCounter--;
+                    NotifyMain();
+                }));
             }
         }
+        private RelayCommand resetFilter;
+        public RelayCommand ResetFilter
+        {
+            get
+            {
+                return resetFilter ?? (resetFilter = new RelayCommand(obj =>
+                {
+                    PageCounter = 0;
+                    SearchBookName = null;
+                    NotifyMain();
+                }));
+            }
+        }
+        private RelayCommand xmlExport;
         public RelayCommand XmlExport
         {
             get
             {
-                return new RelayCommand(obj => 
+                return xmlExport ?? (xmlExport = new RelayCommand(obj => 
                 {
                     var bookstoexp = new List<Books>();
-                    if (BName != null)
-                    {
-                        bookstoexp = db.FindBooks(BName);
-                    }
-                    else
-                    {
-                        bookstoexp = GetData();
-                    }
+                    bookstoexp = GetData();
                     XDocument xdoc = new XDocument();
                     XElement xbooks = new XElement("TestProgram");
 
@@ -259,15 +248,16 @@ namespace Task2.ViewModel
                     xdoc.Add(xbooks);
                     File.WriteAllText(xmlPath, xdoc.ToString());
                     ShowMessageToUser(SuccessfullyUnloaded);
-                });
+                }));
             }
         }
         #region EDIT COMMANDS
+        private RelayCommand editBook;
         public RelayCommand EditBook
         {
             get
             {
-                return new RelayCommand(obj =>
+                return editBook ?? (editBook = new RelayCommand(obj =>
                 {
                     Window wnd = obj as Window;
                     string resultStr = BookNotSelected;
@@ -305,77 +295,80 @@ namespace Task2.ViewModel
                             {
                                 db.EditBook(book, AuthName, AuthLastname, AuthPatro, DateOfBirth, bookName, YearOfCreate);
                                 resultStr = "Done! Книга " + book.BookName + " успешно изменена";
-                                SetNullValuesToProperties();
                                 wnd.Close();
                             }
                             ShowMessageToUser(resultStr);
                         }
                     }
                     else ShowMessageToUser(resultStr);
-                });
+                }));
             }
         }
         #endregion
 
         #region COMMANDS TO OPEN WINDOWS
+        private RelayCommand openAddNewBookWnd;
         public RelayCommand OpenAddNewBookWnd
         {
             get 
             {
-                return new RelayCommand(obj =>
-                    {
-                        SetNullValuesToProperties();
-                        OpenAddBookWindowMethod();
-                        NotifyPropertyChanged("AllBooks");
-                    });
+                return openAddNewBookWnd ?? (openAddNewBookWnd = new RelayCommand(obj =>
+                {
+                    SelectedBook = null;
+                    OpenAddBookWindowMethod();
+                    NotifyPropertyChanged(nameof(AllBooks));
+                }));
             }
         }
+        private RelayCommand openEditItemWnd;
         public RelayCommand OpenEditItemWnd
         {
             get
             {
-                return new RelayCommand(obj =>
+                return openEditItemWnd ?? (openEditItemWnd = new RelayCommand(obj =>
                 {
                     string resultStr = BookNotSelected;
                     if (SelectedBook != null)
                     {
-                        OpenEditBookWindowMethod(SelectedBook);
-                    }
-                });
+                        OpenEditBookWindowMethod();
+                    } else ShowMessageToUser(resultStr);
+                }));
             }
-
         }
+        private RelayCommand openFileWnd;
         public RelayCommand OpenFileWnd
         {
             get
             {
-                return new RelayCommand(async obj =>
+                return openFileWnd ?? (openFileWnd = new RelayCommand(async obj =>
                 {
                     await OpenFileWindowMethodAsync();
-                    NotifyPropertyChanged("AllBooks");
-                });
+                    NotifyPropertyChanged(nameof(AllBooks));
+                }));
             }
         }
+        private RelayCommand openExportWnd;
         public RelayCommand OpenExportWnd
         {
             get
             {
-                return new RelayCommand(obj =>
+                return openExportWnd ?? (openExportWnd = new RelayCommand(obj =>
                 {
                     ExportFileWindowMethod();
                     ShowMessageToUser(SuccessfullyUnloaded);
-                });
+                }));
             }
         }
+        private RelayCommand openFilterWnd;
         public RelayCommand OpenFilterWnd
         {
             get
             {
-                return new RelayCommand(obj =>
+                return openFilterWnd ?? (openFilterWnd = new RelayCommand(obj =>
                 {
                     OpenFilterWindowMethod();
-                    NotifyPropertyChanged("AllBooks");
-                });
+                    NotifyMain();
+                }));
             }
         }
         #endregion
@@ -400,7 +393,7 @@ namespace Task2.ViewModel
                 var sFilename = fileDialog.FileName;
                 try
                 {
-                    await Task.Run(() => ReadExcel(sFilename));
+                    await ReadExcel(sFilename);
                     ShowMessageToUser(SuccessfullyUploaded);
                 }
                 catch
@@ -410,17 +403,10 @@ namespace Task2.ViewModel
             }
         }
 
-        private static void ExportFileWindowMethod()
+        private void ExportFileWindowMethod()
         {
             var bookstoexp = new List<Books>();
-            if (BName != null)
-            {
-                bookstoexp = db.FindBooks(BName);
-            }
-            else
-            {
-                bookstoexp = GetData();
-            }
+            bookstoexp = GetData();
 
             var csvFileDescription = new CsvFileDescription
             {
@@ -431,12 +417,11 @@ namespace Task2.ViewModel
 
             var csvContext = new CsvContext();
             csvContext.Write(bookstoexp, csvExportPath, csvFileDescription);
-//            BName = null;
         }
 
-        private void OpenEditBookWindowMethod(Books book)
+        private void OpenEditBookWindowMethod()
         {
-            EditBookWindow editBookWindow = new EditBookWindow(book);
+            EditBookWindow editBookWindow = new EditBookWindow();
             SetCenterPositionAndOpen(editBookWindow);
         }
 
@@ -460,52 +445,61 @@ namespace Task2.ViewModel
             block.BorderBrush = Brushes.Red;
         }
 
-        #region UPDATE VIEWS
-
-        private void SetNullValuesToProperties()
-        {
-            AuthName = null;
-            AuthLastname = null;
-            AuthPatro = null;
-            DateOfBirth = null; 
-            bookName = null;
-            YearOfCreate = null;
-        }
-
-        #endregion
         private void ShowMessageToUser(string message)
         {
             MessageView messageView = new MessageView(message);
             SetCenterPositionAndOpen(messageView);
         }
-
-        private void ReadExcel(string Filename)
+        private async Task ReadExcel(string Filename)
         {
             bool is_first_row = true;
             //читаем эксель
-            using (StreamReader reader = new StreamReader(Filename))
+            await Task.Run(() =>
             {
-                // построчно заносим данные в бд
-                while (!reader.EndOfStream)
+                using (StreamReader reader = new StreamReader(Filename))
                 {
-                    var line = reader.ReadLine();
-                    if (is_first_row == false)
+                    // построчно заносим данные в бд
+                    while (!reader.EndOfStream)
                     {
-                        var values = line.Split(';');
-                        if (values.Count() > 5)
+                        var line = reader.ReadLine();
+                        if (is_first_row == false)
                         {
-                            Books book = new Books { Name = values[0], Lastname = values[1], Patro = values[2], BirthDate = DateTime.Parse(values[3]), BookName = values[4], Year = Int32.Parse(values[5]) };
-                            db.AddBook(book);
+                            var values = line.Split(';');
+                            if (values.Count() > 5)
+                            {
+                                Books book = new Books { Name = values[0], Lastname = values[1], Patro = values[2], BirthDate = DateTime.Parse(values[3]), BookName = values[4], Year = Int32.Parse(values[5]) };
+                                db.AddBook(book);
+                            }
                         }
+                        is_first_row = false;
                     }
-                    is_first_row = false;
                 }
-            }
+            });
+        }
+        private List<Books> GetData()
+        {
+            if (SearchBookName != null)
+            {
+                return db.FindBooks(SearchBookName).Skip(pageSize * PageCounter).Take(pageSize).ToList();
+            } 
+            else return db.GetBooks().Skip(pageSize * PageCounter).Take(pageSize).ToList();
         }
 
-        private static List<Books> GetData()
+        private int GetCountBooks()
         {
-            return db.GetBooks().Skip(pageSize * PageCounter).Take(pageSize).ToList();
+            if (SearchBookName != null)
+            {
+                return db.FindBooks(SearchBookName).Count();
+            }
+            else return db.GetBooks().Count();
+        }
+
+        private void NotifyMain()
+        {
+            NotifyPropertyChanged(nameof(AllBooks));
+            NotifyPropertyChanged(nameof(hasNext));
+            NotifyPropertyChanged(nameof(hasPrev));
+            NotifyPropertyChanged(nameof(IsBusy));
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
